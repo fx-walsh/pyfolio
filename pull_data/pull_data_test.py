@@ -8,6 +8,7 @@ import string
 import requests
 from bs4 import BeautifulSoup
 
+
 print("it's working")
 
 start = datetime.datetime(2000,1,1)
@@ -21,7 +22,6 @@ print("End Date: ", end)
 #==========================================================
 
 # website url where tickers exits
-
 def scrape_tickers(
     exchange: str = 'NYSE',
     url: str = 'eoddata.com/stocklist',
