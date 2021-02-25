@@ -32,8 +32,14 @@ engine = create_postgres_engine(
     database='folio'
 )
 
-meta = MetaData(engine)
+meta = MetaData(engine, schema='lkp')
+meta.reflect(bind=engine)
 
+#print(meta.tables)
+
+ticker = meta.tables['lkp.ticker']
+
+"""
 ticker = Table(
     'ticker', meta,
     Column('exchange', String, primary_key=True),
@@ -42,6 +48,7 @@ ticker = Table(
     schema='lkp'
 )
 meta.create_all()
+"""
 
 ins = ticker.insert().values(
       exchange='NYSE',
@@ -50,4 +57,3 @@ ins = ticker.insert().values(
 conn = engine.connect()
 conn.execute(ins)
 
-print(ticker.columns)
