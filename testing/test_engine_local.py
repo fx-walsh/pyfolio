@@ -24,8 +24,8 @@ def create_postgres_engine(
     return ret_eng
 
 engine = create_postgres_engine(
-    username='postgres',
-    password='Micail@2',
+    username='',
+    password='',
     dialect_driver='postgresql',
     host='localhost',
     port='1234',

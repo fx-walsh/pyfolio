@@ -9,6 +9,8 @@ import requests
 from bs4 import BeautifulSoup
 from sqlalchemy import create_engine, text, MetaData, Table, Column, String, Integer
 import sqlalchemy as sa
+from .global_vars import DB_USER, DB_PASSWORD
+
 
 
 print("it's working")
@@ -79,8 +81,8 @@ def scrape_tickers(
 
 
 engine = create_postgres_engine(
-    username='fwalsh',
-    password='Gotarheels!',
+    username=DB_USER,
+    password=DB_PASSWORD,
     dialect_driver='postgresql',
     host='folio1.cd5sapiffloo.us-east-2.rds.amazonaws.com',
     port='5432',
