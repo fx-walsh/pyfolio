@@ -15,8 +15,8 @@ def create_postgres_engine(
     return ret_eng
 
 engine = create_postgres_engine(
-    username='fwalsh',
-    password='Gotarheels!',
+    username='',
+    password='',
     dialect_driver='postgresql',
     host='folio1.cd5sapiffloo.us-east-2.rds.amazonaws.com',
     port='5432',
@@ -28,8 +28,8 @@ with engine.connect() as conn:
 
 
 engine1 = create_postgres_engine(
-    username='fwalsh',
-    password='Gotarheels!',
+    username='',
+    password='',
     dialect_driver='postgresql',
     host='folio1.cd5sapiffloo.us-east-2.rds.amazonaws.com',
     port='5432',
