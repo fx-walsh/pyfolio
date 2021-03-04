@@ -35,8 +35,8 @@ def create_postgres_engine(
 
 
 engine = create_postgres_engine(
-    username='fwalsh',
-    password='Gotarheels!',
+    username='',
+    password='',
     dialect_driver='postgresql',
     host='folio1.cd5sapiffloo.us-east-2.rds.amazonaws.com',
     port='5432',
