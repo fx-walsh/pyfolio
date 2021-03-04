@@ -4,7 +4,7 @@ import pandas as pd
 from utils import create_postgres_engine
 import keyring
 
-def create_dataframe():
+def create_dataframe(ticker):
     """Create Pandas DataFrame from local CSV."""
     #df = pd.read_csv("data/311-calls.csv", parse_dates=["created"])
     #df["created"] = df["created"].dt.date
@@ -13,7 +13,7 @@ def create_dataframe():
     #to_remove = num_complaints[num_complaints <= 30].index
     #df.replace(to_remove, np.nan, inplace=True)
     
-    ticker_clean = 'msft'.upper()
+    ticker_clean = ticker.upper()
 
     query = f"SELECT * FROM raw.monthly_prices WHERE ticker = '{ticker_clean}'"
 
@@ -36,3 +36,30 @@ def create_dataframe():
         )
     
     return data
+
+def pull_tickers():
+
+    query = f"SELECT distinct ticker FROM lkp.ticker"
+
+
+    engine = create_postgres_engine(
+        username='fwalsh',
+        password=keyring.get_password('folio', 'fwalsh'),
+        dialect_driver='postgresql',
+        host='folio1.cd5sapiffloo.us-east-2.rds.amazonaws.com',
+        port='5432',
+        database='folio'
+    )
+
+    with engine.connect() as conn:
+        #res = conn.execute(text(query))
+        #data = res.fetchall()
+
+        data = pd.read_sql(
+            con=conn,
+            sql=query
+        )
+
+        data_list = data.ticker.tolist()
+    
+    return data_list
