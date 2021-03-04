@@ -15,6 +15,8 @@ class Config:
     FLASK_ENV = environ.get("FLASK_ENV")
     SECRET_KEY = environ.get("SECRET_KEY")
 
+    DB_USERNAME = environ.get('DB_USER')
+
     # Assets
     #LESS_BIN = environ.get("LESS_BIN")
     #ASSETS_DEBUG = environ.get("ASSETS_DEBUG")

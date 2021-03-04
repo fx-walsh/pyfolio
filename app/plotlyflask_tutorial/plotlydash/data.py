@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from utils import create_postgres_engine
 import keyring
+import config as conf
 
 def create_dataframe(ticker):
     """Create Pandas DataFrame from local CSV."""
@@ -17,9 +18,11 @@ def create_dataframe(ticker):
 
     query = f"SELECT * FROM raw.monthly_prices WHERE ticker = '{ticker_clean}'"
 
+    username = conf.Config.DB_USERNAME
+
     engine = create_postgres_engine(
-        username='fwalsh',
-        password=keyring.get_password('folio', 'fwalsh'),
+        username=username,
+        password=keyring.get_password('folio', username),
         dialect_driver='postgresql',
         host='folio1.cd5sapiffloo.us-east-2.rds.amazonaws.com',
         port='5432',
@@ -41,10 +44,11 @@ def pull_tickers():
 
     query = f"SELECT distinct ticker FROM lkp.ticker"
 
+    username = conf.Config.DB_USERNAME
 
     engine = create_postgres_engine(
-        username='fwalsh',
-        password=keyring.get_password('folio', 'fwalsh'),
+        username=username,
+        password=keyring.get_password('folio', username),
         dialect_driver='postgresql',
         host='folio1.cd5sapiffloo.us-east-2.rds.amazonaws.com',
         port='5432',
