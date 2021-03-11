@@ -48,21 +48,35 @@ engine = create_postgres_engine(
 
 with engine.connect() as conn:
 
-    res = conn.execute(text('SELECT * FROM lkp.ticker'))
+    res = conn.execute(text('SELECT * FROM lkp.ticker as t LEFT JOIN lkp.delisted as d on t.ticker = d.ticker WHERE d.ticker is NULL'))
     tickers_info = res.fetchall()
 
-    monthly_tickers_q = text('SELECT distinct ticker FROM raw.monthly_summary')
-    monthly_tickers = pd.read_sql(
-        monthly_tickers_q,
+    monthly_sum_tickers_q = text('SELECT distinct ticker FROM raw.monthly_summary')
+    monthly_sum_tickers = pd.read_sql(
+        monthly_sum_tickers_q,
         con=conn
     )
 
-    tickers_already_loaded = monthly_tickers.ticker.tolist()
+    div_tickers_q = text('SELECT distinct ticker FROM raw.actions')
+    div_tickers = pd.read_sql(
+        div_tickers_q,
+        con=conn
+    )
+
+    info_tickers_q = text('SELECT distinct ticker FROM lkp.ticker_info')
+    info_tickers = pd.read_sql(
+        info_tickers_q,
+        con=conn
+    )
+
+    monthly_summary_al = monthly_sum_tickers.ticker.tolist()
+    div_al = div_tickers.ticker.tolist()
+    info_al = info_tickers.ticker.tolist()
 
     
     for ticker_info in tickers_info:
         
-        if ticker_info[1] not in tickers_already_loaded:
+        if ticker_info[1] not in monthly_summary_al:
             print("------------------------------------------------------------------")
             print("Pulling Data for Ticker: ", ticker_info[1])
 
@@ -74,6 +88,17 @@ with engine.connect() as conn:
 
             if ticker_data.empty:
                 print("Ticker data does not exist")
+                ticker_dict = {'ticker': ticker_info[1]}
+
+                temp_ticker_df = pd.DataFrame(ticker_dict, index=[0])
+
+                temp_ticker_df.to_sql(
+                    name='delisted',
+                    schema='lkp',
+                    con=conn,
+                    if_exists='append',
+                    index=False
+                )
             else:
                 # loading historical stock price info
                 ticker_data['ticker'] = ticker_info[1]
@@ -105,52 +130,54 @@ with engine.connect() as conn:
 
                 print('2. pulling historical dividends and stock splits')
                 # loading historical actions data
-                ticker_actions = ticker.actions
-                ticker_actions.reset_index(inplace=True)
-                ticker_actions.columns = ['market_date', 'dividends', 'stock_splits']
-                ticker_actions['ticker'] = ticker_info[1]
-                ticker_actions = ticker_actions[['ticker', 'market_date', 'dividends', 'stock_splits']]
+                if ticker_info[1] not in info_al:
+                    ticker_actions = ticker.actions
+                    ticker_actions.reset_index(inplace=True)
+                    ticker_actions.columns = ['market_date', 'dividends', 'stock_splits']
+                    ticker_actions['ticker'] = ticker_info[1]
+                    ticker_actions = ticker_actions[['ticker', 'market_date', 'dividends', 'stock_splits']]
 
-                ticker_actions.to_sql(
-                    name='actions',
-                    schema='raw',
-                    con=conn,
-                    if_exists='append',
-                    index=False
-                )
+                    ticker_actions.to_sql(
+                        name='actions',
+                        schema='raw',
+                        con=conn,
+                        if_exists='append',
+                        index=False
+                    )
 
                 print("3. pulling company info")
                 # loading ticker info
-                try:
-                    ticker_background = ticker.info
-                except:
-                    print('Info produces error for ticker: ', ticker_info[1])
-                    ticker_background = {}
+                if ticker_info[1] not in div_al:
+                    try:
+                        ticker_background = ticker.info
+                    except:
+                        print('Info produces error for ticker: ', ticker_info[1])
+                        ticker_background = {}
 
-                desired_cols = ['sector', 'fullTimeEmployees', 'longBusinessSummary', 'city', 'state', 'country', 'website']
+                    desired_cols = ['sector', 'fullTimeEmployees', 'longBusinessSummary', 'city', 'state', 'country', 'website']
 
-                temp_dict = {}
+                    temp_dict = {}
 
-                ticker_back_keys = ticker_background.keys()
-                for col in desired_cols:
-                    if col in ticker_back_keys:
-                        temp_dict[col] = ticker_background[col]
-                    else:
-                        temp_dict[col] = np.NaN
+                    ticker_back_keys = ticker_background.keys()
+                    for col in desired_cols:
+                        if col in ticker_back_keys:
+                            temp_dict[col] = ticker_background[col]
+                        else:
+                            temp_dict[col] = np.NaN
 
-                ticker_info_df = pd.DataFrame(temp_dict, index=[0])
+                    ticker_info_df = pd.DataFrame(temp_dict, index=[0])
 
-                ticker_info_df.columns = ['sector', 'num_fulltime_emps', 'long_biz_summary', 'city', 'state', 'country', 'website']
+                    ticker_info_df.columns = ['sector', 'num_fulltime_emps', 'long_biz_summary', 'city', 'state', 'country', 'website']
 
-                ticker_info_df['ticker'] = ticker_info[1]
+                    ticker_info_df['ticker'] = ticker_info[1]
 
-                ticker_info_df.to_sql(
-                    name='ticker_info',
-                    schema='lkp',
-                    con=conn,
-                    if_exists='append',
-                    index=False
-                )
+                    ticker_info_df.to_sql(
+                        name='ticker_info',
+                        schema='lkp',
+                        con=conn,
+                        if_exists='append',
+                        index=False
+                    )
 
 
     
