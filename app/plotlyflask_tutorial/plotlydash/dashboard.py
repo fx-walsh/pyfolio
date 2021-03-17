@@ -8,6 +8,8 @@ import dash_core_components as dcc
 from .data import create_dataframe, pull_tickers, query_to_pandas
 from .layout import html_layout
 import plotly.express as px
+import plotly.graph_objects as go
+import plotly.figure_factory as ff
 
 def init_dashboard(server):
     """Create a Plotly Dash dashboard."""
@@ -36,13 +38,38 @@ def init_dashboard(server):
                     multi=True)
             ]),
             html.H1(id='ticker-title'),
-            html.Div([dcc.Graph(id='line-graph')]),
-            html.Div([dash_table.DataTable(
-                        id='table',
-                        sort_action="native",
-                        sort_mode='native',
-                        page_size=300)
-        ])
+            html.Div([
+                html.Div([dcc.Graph(id='line-graph')], style={'width': '49%', 'display': 'inline-block'}),
+                html.Div([dcc.Graph(id='heat-map')], style={'width': '49%', 'display': 'inline-block'})
+            ]),
+            html.Div([
+                dash_table.DataTable(
+                    id='computed-table',
+                    style_data={'whiteSpace': 'normal', 'height': 'auto', 'textAlign': 'left'},
+                    style_cell={'textAlign': 'left', 'padding': '5px'},
+                    style_as_list_view=True,
+                    style_header={
+                        'backgroundColor': 'white',
+                        'fontWeight': 'bold'
+                    },
+                    #style_cell_conditional=[
+                    #    {
+                    #        'if': {'column_id': c},
+                    #        'textAlign': 'left'
+                    #    } for c in ['Date', 'Region']
+                    #],
+                    columns=[
+                    {'name': 'Ticker', 'id': 'ticker'},
+                    {'name': 'Company', 'id': 'company_name'},
+                    {'name': 'Sector', 'id': 'sector'},
+                    {'name': 'City', 'id': 'city'},
+                    {'name': 'State', 'id': 'state'},
+                    {'name': 'Website', 'id': 'website'},
+                    {'name': 'Business Summary', 'id': 'long_biz_summary'}
+                ]
+                )
+            ])
+            
     ],
         id='dash-container'
     )
@@ -61,13 +88,74 @@ def init_dashboard(server):
 
 
     @dash_app.callback(
-        [dash.dependencies.Output('table', 'data'), dash.dependencies.Output('table', 'columns')],
-        [dash.dependencies.Input("ticker-filter", "value")])
+        #dash.dependencies.Output('table', 'data'), dash.dependencies.Output('table', 'columns')
+        dash.dependencies.Output('heat-map', 'figure'),
+        dash.dependencies.Input("ticker-filter", "value"))
     def create_table(ticker_filter):
+
+        metric_col = 'avg_close'
 
         df_sub = create_dataframe(ticker_filter)
 
-        return df_sub.to_dict('records'), [{"name": i, "id": i} for i in df_sub.columns]
+        df_piv = df_sub.pivot(
+            index='year_month',
+            columns='ticker',
+            values=metric_col
+        )
+
+        #df_piv.reset_index(inplace=True)
+
+        cor_mat = df_piv.corr()
+
+        cor_mat_np = cor_mat.to_numpy()
+
+        print(cor_mat_np)
+
+        col_labs = list(cor_mat.columns.values)     
+        
+        heat_data = go.Heatmap(
+            z=cor_mat,
+            x=col_labs,
+            y=col_labs,
+            zmin=-1,
+            zmax=1,
+            colorscale=[[0.0, "rgb(165,0,38)"],
+                [0.1111111111111111, "rgb(215,48,39)"],
+                [0.2222222222222222, "rgb(244,109,67)"],
+                [0.3333333333333333, "rgb(253,174,97)"],
+                [0.4444444444444444, "rgb(254,224,144)"],
+                [0.5555555555555556, "rgb(224,243,248)"],
+                [0.6666666666666666, "rgb(171,217,233)"],
+                [0.7777777777777778, "rgb(116,173,209)"],
+                [0.8888888888888888, "rgb(69,117,180)"],
+                [1.0, "rgb(49,54,149)"]]
+        )
+
+
+
+        #fig = go.Figure(heat_data)
+
+        fig = ff.create_annotated_heatmap(
+            z=cor_mat_np,
+            x=col_labs,
+            y=col_labs,
+            zmin=-1,
+            zmax=1,
+            showscale=True,
+            colorscale=[[0.0, "rgb(165,0,38)"],
+                [0.1111111111111111, "rgb(215,48,39)"],
+                [0.2222222222222222, "rgb(244,109,67)"],
+                [0.3333333333333333, "rgb(253,174,97)"],
+                [0.4444444444444444, "rgb(254,224,144)"],
+                [0.5555555555555556, "rgb(224,243,248)"],
+                [0.6666666666666666, "rgb(171,217,233)"],
+                [0.7777777777777778, "rgb(116,173,209)"],
+                [0.8888888888888888, "rgb(69,117,180)"],
+                [1.0, "rgb(49,54,149)"]]
+        )
+
+        return fig
+        #return cor_mat.to_dict('records'), [{"name": i, "id": i} for i in cor_mat.columns]
 
     @dash_app.callback(
         dash.dependencies.Output('ticker-title', 'children'),
@@ -94,6 +182,42 @@ def init_dashboard(server):
         title = f'Showing data for: {company_names_str}'
         
         return title
+
+    @dash_app.callback(
+        dash.dependencies.Output('computed-table', 'data'),
+        dash.dependencies.Input('ticker-filter', 'value'))
+    def create_ticker_info_table(ticker_filter):
+
+        ticker_list_clean = [ticker.upper() for ticker in ticker_filter]
+
+        if len(ticker_list_clean) > 1:
+            ticker_list_str = "', '".join(ticker_list_clean)
+        else:
+            ticker_list_str = ticker_list_clean[0]
+        
+        ticker_list_str = f"('{ticker_list_str}')"
+
+        query = (
+            "select "
+                "ti.ticker, "
+                "t.company_name, "
+                "ti.sector, "
+                "ti.city, "
+                "ti.state, "
+                "ti.country, "
+                "ti.website, "
+                "ti.long_biz_summary "
+            "from lkp.ticker_info as ti "
+            "left join lkp.ticker as t "
+            "on ti.ticker = t.ticker "
+            f"WHERE t.ticker in {ticker_list_str}"
+        )
+        
+        temp_df = query_to_pandas(query=query)
+
+        temp_dict = temp_df.to_dict(orient='records')
+       
+        return temp_dict
     
 
     return dash_app.server
