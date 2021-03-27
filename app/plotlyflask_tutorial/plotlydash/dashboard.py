@@ -5,11 +5,12 @@ import dash
 import dash_table
 import dash_html_components as html
 import dash_core_components as dcc
-from .data import create_dataframe, pull_tickers, query_to_pandas
+from .data import create_dataframe, pull_tickers, query_to_pandas, pull_dates
 from .layout import html_layout
 import plotly.express as px
 import plotly.graph_objects as go
 import plotly.figure_factory as ff
+from datetime import date
 
 def init_dashboard(server):
     """Create a Plotly Dash dashboard."""
@@ -25,6 +26,8 @@ def init_dashboard(server):
     # Load DataFrame
     tickers = pull_tickers()
 
+    dates = pull_dates()
+
     # Custom HTML layout
     dash_app.index_string = html_layout
 
@@ -35,7 +38,14 @@ def init_dashboard(server):
                     id='ticker-filter',
                     options=[{'label': i, 'value': i} for i in tickers],
                     value=tickers[0],
-                    multi=True)
+                    multi=True),
+                dcc.DatePickerRange(
+                    id='my-date-picker-range',
+                    min_date_allowed=dates[0],
+                    max_date_allowed=dates[1],
+                    start_date=dates[0],
+                    end_date=dates[1]
+                )
             ]),
             html.H1(id='ticker-title'),
             html.Div([
@@ -89,10 +99,12 @@ def init_dashboard(server):
     
     @dash_app.callback(
         dash.dependencies.Output('line-graph', 'figure'),
-        [dash.dependencies.Input('ticker-filter', 'value')])
-    def create_time_series(ticker_filter):
+        [dash.dependencies.Input('ticker-filter', 'value'),
+        dash.dependencies.Input('my-date-picker-range', 'start_date'),
+        dash.dependencies.Input('my-date-picker-range', 'end_date')])
+    def create_time_series(ticker_filter, start_date, end_date):
         
-        df = create_dataframe(ticker_filter)
+        df = create_dataframe(ticker_filter, min_date=start_date, max_date=end_date)
 
 #        fig = px.line(df, x="year_month", y=["lowest_close", "avg_close", "highest_close"], title='Monthly Low and High Price')
         fig = px.line(df, x="year_month", y= "avg_close", color='ticker', title='Monthly Low and High Price')
@@ -104,12 +116,14 @@ def init_dashboard(server):
     @dash_app.callback(
         #dash.dependencies.Output('table', 'data'), dash.dependencies.Output('table', 'columns')
         dash.dependencies.Output('heat-map1', 'figure'),
-        dash.dependencies.Input("ticker-filter", "value"))
-    def create_table(ticker_filter):
+        [dash.dependencies.Input('ticker-filter', 'value'),
+        dash.dependencies.Input('my-date-picker-range', 'start_date'),
+        dash.dependencies.Input('my-date-picker-range', 'end_date')])
+    def create_table1(ticker_filter, start_date, end_date):
 
         metric_col = 'avg_close'
 
-        df_sub = create_dataframe(ticker_filter)
+        df_sub = create_dataframe(ticker_filter, start_date, end_date)
 
         df_piv = df_sub.pivot(
             index='year_month',
@@ -122,6 +136,8 @@ def init_dashboard(server):
         cor_mat = df_piv.corr()
 
         cor_mat_np = cor_mat.to_numpy()
+
+        cor_mat_np = np.round(cor_mat_np, 2)
 
         col_labs = list(cor_mat.columns.values)     
         
@@ -172,12 +188,14 @@ def init_dashboard(server):
     @dash_app.callback(
         #dash.dependencies.Output('table', 'data'), dash.dependencies.Output('table', 'columns')
         dash.dependencies.Output('heat-map', 'figure'),
-        dash.dependencies.Input("ticker-filter", "value"))
-    def create_table(ticker_filter):
+        [dash.dependencies.Input('ticker-filter', 'value'),
+        dash.dependencies.Input('my-date-picker-range', 'start_date'),
+        dash.dependencies.Input('my-date-picker-range', 'end_date')])
+    def create_table(ticker_filter, start_date, end_date):
 
         metric_col = 'avg_close'
 
-        df_sub = create_dataframe(ticker_filter)
+        df_sub = create_dataframe(ticker_filter, min_date=start_date, max_date=end_date)
 
         df_piv = df_sub.pivot(
             index='year_month',
@@ -189,6 +207,10 @@ def init_dashboard(server):
 
         cor_mat = df_piv.corr()
         cor_mat_np = cor_mat.to_numpy()
+        
+        cor_mat_np = np.round(cor_mat_np, 2)
+
+
         col_labs = list(cor_mat.columns.values)     
         
         heat_data = go.Heatmap(
