@@ -5,12 +5,17 @@ import dash
 import dash_table
 import dash_html_components as html
 import dash_core_components as dcc
-from .data import create_dataframe, pull_tickers, query_to_pandas, pull_dates
+from .data import create_dataframe, pull_tickers_update, query_to_pandas, pull_dates
 from .layout import html_layout
 import plotly.express as px
 import plotly.graph_objects as go
 import plotly.figure_factory as ff
 from datetime import date
+
+LAYOUT = {
+    'paper_bgcolor': 'black',
+    'font': {'color': 'white'}
+}
 
 def init_dashboard(server):
     """Create a Plotly Dash dashboard."""
@@ -18,13 +23,15 @@ def init_dashboard(server):
         server=server,
         routes_pathname_prefix='/dashapp/',
         external_stylesheets=[
-            '/static/dist/css/styles.css',
-            'https://fonts.googleapis.com/css?family=Lato'
+            '/static/css/style.css'
+            #'https://fonts.googleapis.com/css?family=Lato'
         ]
     )
 
     # Load DataFrame
-    tickers = pull_tickers()
+    ticker_dict = pull_tickers_update()
+    values = ticker_dict['values']
+    labels = ticker_dict['labels']
 
     dates = pull_dates()
 
@@ -33,12 +40,17 @@ def init_dashboard(server):
 
     # Create Layout
     dash_app.layout = html.Div([
+            html.H3('Select stocks to compare'),
             html.Div([
                 dcc.Dropdown(
                     id='ticker-filter',
-                    options=[{'label': i, 'value': i} for i in tickers],
-                    value=tickers[0],
-                    multi=True),
+                    options=[{'label': i, 'value': j} for i, j in zip(labels, values)],
+                    value=values[0],
+                    multi=True,
+                    style={'background': 'black'}),
+            ]),
+            html.H3('Select a date range'),
+            html.Div([
                 dcc.DatePickerRange(
                     id='my-date-picker-range',
                     min_date_allowed=dates[0],
@@ -49,7 +61,9 @@ def init_dashboard(server):
             ]),
             html.H1(id='ticker-title'),
             html.Div([
-                html.Div([dcc.Graph(id='line-graph')], style={'width': '66%', 'height': '400px', 'display': 'inline-block'}) ,
+                html.Div([
+                    dcc.Graph(id='line-graph')], 
+                    style={'width': '66%', 'height': '400px', 'display': 'inline-block'}) ,
                 html.Div([
                     dcc.Graph(id='heat-map1')
                     ], style={'width': '32%', 'height': '400px', 'display': 'inline-block', 'margin': 0, 'padding': 0})
@@ -67,10 +81,10 @@ def init_dashboard(server):
                 dash_table.DataTable(
                     id='ticker-descr',
                     style_data={'whiteSpace': 'normal', 'height': 'auto', 'textAlign': 'left'},
-                    style_cell={'textAlign': 'left', 'padding': '5px'},
+                    style_cell={'textAlign': 'left', 'padding': '5px', 'backgroundColor': 'black'},
                     style_as_list_view=True,
                     style_header={
-                        'backgroundColor': 'white',
+                        'backgroundColor': 'black',
                         'fontWeight': 'bold'
                     },
                     #style_cell_conditional=[
@@ -110,6 +124,8 @@ def init_dashboard(server):
         fig = px.line(df, x="year_month", y= "avg_close", color='ticker', title='Monthly Low and High Price')
         
         fig.update_layout(height=400)
+        #fig.update_layout(paper_bgcolor="black")
+        fig.update_layout(LAYOUT)
 
         return  fig
 
@@ -182,6 +198,9 @@ def init_dashboard(server):
                 [1.0, "rgb(49,54,149)"]]
         )
 
+        #fig.update_layout(paper_bgcolor="black")
+        fig.update_layout(LAYOUT)
+
         return fig
 
 
@@ -249,6 +268,9 @@ def init_dashboard(server):
                 [0.8888888888888888, "rgb(69,117,180)"],
                 [1.0, "rgb(49,54,149)"]]
         )
+
+        #fig.update_layout(paper_bgcolor="black")
+        fig.update_layout(LAYOUT)
 
         return fig
 
@@ -350,6 +372,8 @@ def init_dashboard(server):
         fig = px.scatter(temp_df, x="market_date", y= "dividends", color='ticker_div', title='Dividends Paid')
     
         fig.update_layout(height=400)
+        #fig.update_layout(paper_bgcolor="black")
+        fig.update_layout(LAYOUT)
 
         return fig
 

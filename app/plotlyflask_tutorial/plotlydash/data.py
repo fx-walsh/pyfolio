@@ -89,6 +89,44 @@ def pull_tickers():
     
     return data_list
 
+def pull_tickers_update():
+
+    query = f"select distinct ti.ticker, t.company_name from lkp.ticker_info as ti left join lkp.ticker as t on ti.ticker = t.ticker order by ti.ticker"
+
+    username = conf.Config.DB_USERNAME
+
+    engine = create_postgres_engine(
+        username=username,
+        password=keyring.get_password('folio', username),
+        dialect_driver='postgresql',
+        host='folio1.cd5sapiffloo.us-east-2.rds.amazonaws.com',
+        port='5432',
+        database='folio'
+    )
+
+    with engine.connect() as conn:
+        #res = conn.execute(text(query))
+        #data = res.fetchall()
+
+        data = pd.read_sql(
+            con=conn,
+            sql=query
+        )
+
+    values = data.ticker.tolist()
+
+    data['label'] = data.ticker + ' : ' + data.company_name
+
+    labels = data.label.tolist()
+
+    return_dict = {
+        'values': values,
+        'labels': labels
+    }
+
+    return return_dict
+
+
 def pull_dates():
 
     query = f"SELECT min(year_month) as min_year_month, max(year_month) as max_year_month FROM raw.monthly_summary"

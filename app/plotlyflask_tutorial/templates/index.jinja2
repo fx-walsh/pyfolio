@@ -4,10 +4,18 @@
 <div class="card">
   <img src="{{ url_for('static', filename='img/logo.png') }}" class="logo" />
   <h1 class="site-title">{{ title }}</h1>
-  <p class="subtitle">Demo for embedding Plotly Dash within Flask Apps (View source on <a href="https://github.com/toddbirchard/plotlydash-flask-tutorial">Github</a>).</p>
-  <a href="/dashapp/" class="dash-link">
-    <span>Embdedded Plotly Dash</span>
-    <i class="fas fa-arrow-right"></i>
-  </a>
+  <p class="subtitle">A web app presenting data for defeating the market once and for all</p>
+  <p>
+    <a href="/dashapp/" class="dash-link">
+      <span>Compare Individual Stocks</span>
+      <i class="fas fa-arrow-right"></i>
+    </a>
+  </p>
+  <p>
+    <a href="/dashapp/" class="dash-link">
+      <span>Analyze Stock vs. Sector Performance</span>
+      <i class="fas fa-arrow-right"></i>
+    </a>
+  </p>
 </div>
 {% endblock %}
