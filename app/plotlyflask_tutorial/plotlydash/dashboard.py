@@ -56,7 +56,8 @@ def init_dashboard(server):
                     min_date_allowed=dates[0],
                     max_date_allowed=dates[1],
                     start_date=dates[0],
-                    end_date=dates[1]
+                    end_date=dates[1],
+                    style={'background': 'black'}
                 )
             ]),
             html.H1(id='ticker-title'),
