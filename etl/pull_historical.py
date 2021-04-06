@@ -16,8 +16,6 @@ def pull_historical_data(start_date, end_date, engine):
     
     with engine.connect() as conn:
     
-        conn.execute(text('TRUNCATE TABLE lkp.ticker_info'))
-
         ticker_q = text('SELECT t.* FROM lkp.ticker as t LEFT JOIN lkp.delisted as d on t.ticker = d.ticker WHERE d.ticker is NULL')
         tickers_df = pd.read_sql(
             ticker_q,
@@ -45,9 +43,20 @@ def pull_historical_data(start_date, end_date, engine):
             div_tickers_q,
             con=conn
         )
+
+        conn.execute(text(f"DELETE FROM lkp.ticker_info WHERE update_year_month <> '{current_year_month}'"))
+
+        info_tickers_q = (
+            f"SELECT ticker FROM lkp.ticker_info WHERE update_year_month = '{current_year_month}'"
+        )
+        info_tickers = pd.read_sql(
+            info_tickers_q,
+            con=conn
+        )
     
         all_tickers = tickers_df.ticker.tolist()
         monthly_summary_al = monthly_sum_tickers.ticker.tolist()
+        info_tickers_al = info_tickers.ticker.tolist()
         
         for ticker in all_tickers:
             print("------------------------------------------------------------------")
@@ -106,6 +115,9 @@ def pull_historical_data(start_date, end_date, engine):
                         if_exists='append',
                         index=False
                     )
+
+                    print(" - Rows loaded: ", ticker_data_monthly.shape[0])
+
             else:
                 print('1. Already loaded monthly stock prices')
 
@@ -138,38 +150,47 @@ def pull_historical_data(start_date, end_date, engine):
                 index=False
             )
 
-            print("3. pulling company info")
-            # loading ticker info
-            try:
-                ticker_background = ticker_yf.info
-            except:
-                print('Info produces error for ticker: ', ticker)
-                ticker_background = {}
+            print(" - Rows loaded: ", ticker_actions.shape[0])
 
-            desired_cols = ['sector', 'fullTimeEmployees', 'longBusinessSummary', 'city', 'state', 'country', 'website']
+            if ticker not in info_tickers_al:
+                print("3. pulling company info")
+                # loading ticker info
+                try:
+                    ticker_background = ticker_yf.info
+                except:
+                    print('Info produces error for ticker: ', ticker)
+                    ticker_background = {}
 
-            temp_dict = {}
+                desired_cols = ['sector', 'fullTimeEmployees', 'longBusinessSummary', 'city', 'state', 'country', 'website']
 
-            ticker_back_keys = ticker_background.keys()
-            for col in desired_cols:
-                if col in ticker_back_keys:
-                    temp_dict[col] = ticker_background[col]
-                else:
-                    temp_dict[col] = np.NaN
+                temp_dict = {}
 
-            ticker_info_df = pd.DataFrame(temp_dict, index=[0])
+                ticker_back_keys = ticker_background.keys()
+                for col in desired_cols:
+                    if col in ticker_back_keys:
+                        temp_dict[col] = ticker_background[col]
+                    else:
+                        temp_dict[col] = np.NaN
 
-            ticker_info_df.columns = ['sector', 'num_fulltime_emps', 'long_biz_summary', 'city', 'state', 'country', 'website']
+                ticker_info_df = pd.DataFrame(temp_dict, index=[0])
 
-            ticker_info_df['ticker'] = ticker
+                ticker_info_df.columns = ['sector', 'num_fulltime_emps', 'long_biz_summary', 'city', 'state', 'country', 'website']
 
-            ticker_info_df.to_sql(
-                name='ticker_info',
-                schema='lkp',
-                con=conn,
-                if_exists='append',
-                index=False
-            )
+                ticker_info_df['ticker'] = ticker
+                ticker_info_df['update_year_month'] = current_year_month
+
+                ticker_info_df.to_sql(
+                    name='ticker_info',
+                    schema='lkp',
+                    con=conn,
+                    if_exists='append',
+                    index=False
+                )
+
+                print(" - Rows loaded: ", ticker_info_df.shape[0])
+
+            else:
+                print("3. already loaded company info")
 
 
     

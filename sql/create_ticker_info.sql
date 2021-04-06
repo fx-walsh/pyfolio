@@ -6,5 +6,6 @@ create table lkp.ticker_info (
     state text,
 	country text,
     website text,
-    ticker varchar(10)
+    ticker varchar(10),
+    update_year_month varchar(7)
 );
