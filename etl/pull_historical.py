@@ -132,25 +132,28 @@ def pull_historical_data(start_date, end_date, engine):
             else:
                 max_div_ticker_date = None
 
-            ticker_actions = ticker_yf.actions
-            ticker_actions.reset_index(inplace=True)
-            ticker_actions.columns = ['market_date', 'dividends', 'stock_splits']
-            ticker_actions['ticker'] = ticker
-            ticker_actions = ticker_actions[['ticker', 'market_date', 'dividends', 'stock_splits']]
+            try:
+                ticker_actions = ticker_yf.actions
+                ticker_actions.reset_index(inplace=True)
+                ticker_actions.columns = ['market_date', 'dividends', 'stock_splits']
+                ticker_actions['ticker'] = ticker
+                ticker_actions = ticker_actions[['ticker', 'market_date', 'dividends', 'stock_splits']]
 
-            if max_div_ticker_date:
+                if max_div_ticker_date:
 
-                ticker_actions = ticker_actions[ticker_actions.market_date > max_div_ticker_date]
+                    ticker_actions = ticker_actions[ticker_actions.market_date > max_div_ticker_date]
 
-            ticker_actions.to_sql(
-                name='actions',
-                schema='raw',
-                con=conn,
-                if_exists='append',
-                index=False
-            )
+                ticker_actions.to_sql(
+                    name='actions',
+                    schema='raw',
+                    con=conn,
+                    if_exists='append',
+                    index=False
+                )
 
-            print(" - Rows loaded: ", ticker_actions.shape[0])
+                print(" - Rows loaded: ", ticker_actions.shape[0])
+            except:
+                print('Actions produces error for ticker: ', ticker)    
 
             if ticker not in info_tickers_al:
                 print("3. pulling company info")
