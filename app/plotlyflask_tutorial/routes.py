@@ -8,7 +8,7 @@ def home():
     """Landing page."""
     return render_template(
         'index.jinja2',
-        title='Coomberg Terminal',
+        title='Foomberg Terminal',
         description='Financial Data Web App',
         template='home-template',
         body="This is a homepage served with Flask."

@@ -4,7 +4,7 @@ channels:
   - conda-forge
   - R
 dependencies:
-  - appnope=0.1.2=py39hecd8cb5_1001
+  - appnope
   - argon2-cffi=20.1.0=py39h9ed2024_1
   - async_generator=1.10=pyhd3eb1b0_0
   - attrs=20.3.0=pyhd3eb1b0_0
